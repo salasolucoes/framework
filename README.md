@@ -1,18 +1,18 @@
-# Salaab Base Framework 🚀
+# Sala Framework 🚀
 
 Um mini-framework em PHP prático, leve e moderno, construído utilizando os poderosos e flexíveis componentes do Eloquent (Illuminate) e Symfony Console. Esta base funciona como um esqueleto (boilerplate) pronto para o ínicio de qualquer projeto PHP com uma estrutura organizada (MVC/CSR).
 
 ## 🧰 Requisitos
 
 - PHP `^8.1` ou superior
-- [Composer](https://packagist.org/packages/salaab/framwork) instanciado na máquina
+- [Composer](https://packagist.org/packages/sala/framework) instanciado na máquina
 
 ## 📦 Como Instalar
 
 Para iniciar um projeto novo utilizando esta estrutura base, execute no terminal:
 
 ```bash
-composer create-project salaab/base nome-do-meu-projeto
+composer create-project sala/framework nome-do-meu-projeto
 ```
 
 Isso irá clonar todo este espaço de trabalho com os arquivos mínimos e dependências instaladas.
@@ -50,10 +50,14 @@ Os utilitários principais incluídos são:
 * Suas **Variáveis de Ambiente** ficam no `.env` (basta renomear o `.env.example` caso não exista ainda).
 * Suas **Rotas** vivem limpas e simplificadas dentro de `routes/web.php`.
 
+## 📦 Ecossistema
+
+> Pacotes externos em [`docs/packages.md`](docs/packages.md) — [`sala/console`](https://github.com/salasolucoes/console) + [`@salasolucoes/mcp`](https://github.com/salasolucoes/mcp).
+
 ## 🤝 Contribuindo
 
 Pull requests são sempre bem-vindos! Para grandes mudanças, por favor adicione uma "issue" primeiramente para discutir de que forma seria mais viável efetuar a sua ideia.
 
 ## 📝 Licença
 
-**Proprietária**. (Desenvolvido por Abraão Xavier Sungo Sala - Nsimba Engenharia).
+**Proprietária**. (Desenvolvido por Abraão Xavier Sungo Sala - [Sala Soluções](https://salasolucoes.com)).

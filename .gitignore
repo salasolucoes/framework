@@ -4,5 +4,6 @@
 /storage/dumps/
 /storage/psysh/
 /console
-/docs
+/docs/*
+!/docs/packages.md
 AGENTS.md
