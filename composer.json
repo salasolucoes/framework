@@ -7,7 +7,7 @@
         "php": "^8.4",
         "sala/console": "^1.0",
         "dompdf/dompdf": "^3.1",
-        "eftec/bladeone": "^4.9",
+        "eftec/bladeone": "^5.0",
         "filp/whoops": "^2.18",
         "illuminate/config": "^10.49",
         "illuminate/container": "^10.0",
