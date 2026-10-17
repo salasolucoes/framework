@@ -3,7 +3,13 @@
 /node_modules/
 /storage/dumps/
 /storage/psysh/
+/storage/logs/
+/.phpunit.cache/
+/.phpunit.result.cache
+/.phpstan.cache/
 /console
 /docs/*
 !/docs/packages.md
+!/docs/plans/
+!/docs/plans/**
 AGENTS.md

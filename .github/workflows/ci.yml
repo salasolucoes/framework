@@ -1,0 +1,203 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "1.2.0"]
+  pull_request:
+    branches: [main, "1.2.0"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (Pint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          coverage: none
+          tools: composer:v2
+          extensions: dom, mbstring, curl, json, libxml, zip
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Pint — check coding style
+        run: ./vendor/bin/pint --test
+
+  test:
+    name: Tests (Pest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          coverage: xdebug
+          tools: composer:v2
+          extensions: dom, mbstring, curl, json, libxml, zip, sqlite3, pdo_sqlite
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          mkdir -p storage/framework/views storage/logs
+          chmod -R 777 storage
+
+      - name: Run Pest
+        run: ./vendor/bin/pest --ci --colors=always
+
+  analyse:
+    name: Static Analysis (PHPStan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          coverage: none
+          tools: composer:v2
+          extensions: dom, mbstring, curl, json, libxml
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Run PHPStan
+        run: ./vendor/bin/phpstan analyse --memory-limit=1G --error-format=github
+
+  build:
+    name: Build (Vite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          test -f public/assets/js/app.js || (echo "public/assets/js/app.js not found" && ls -R public/assets && exit 1)
+          ls -lh public/assets/js/ public/assets/css/ || true
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vite-build
+          path: public/assets
+          if-no-files-found: error
+          retention-days: 7
+
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          coverage: none
+          tools: composer:v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Composer audit
+        run: composer audit --format=plain
+
+      - name: NPM audit (high+)
+        # Tailwind 3.x transitives (braces/micromatch/chokidar) are unfixable
+        # without a breaking bump to v4 — report but do not block CI.
+        run: npm audit --audit-level=high || echo "::warning::npm audit found vulnerabilities (see log). Tailwind 3.x transitives require v4 bump — tracked separately."
+
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [lint, test, analyse, build, audit]
+    steps:
+      - name: Check all jobs
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" ]]; then echo "lint failed"; exit 1; fi
+          if [[ "${{ needs.test.result }}" != "success" ]]; then echo "test failed"; exit 1; fi
+          if [[ "${{ needs.analyse.result }}" != "success" ]]; then echo "analyse failed"; exit 1; fi
+          if [[ "${{ needs.build.result }}" != "success" ]]; then echo "build failed"; exit 1; fi
+          if [[ "${{ needs.audit.result }}" != "success" ]]; then echo "audit failed"; exit 1; fi
+          echo "All quality gates passed."
