@@ -2,7 +2,15 @@ parameters:
     level: 5
     paths:
         - app
+        - bootstrap
+        - config
     excludePaths:
         - vendor
+
+    # env() and helpers use mixed intentionally; these are intentional false positives
+    ignoreErrors:
+        - '#Expression on left side of \?\? is not nullable#'
+        - '#Strict comparison using === between mixed and (false|null) will always evaluate to false#'
+        - '#Parameter \#1 \$app of static method Illuminate\\Support\\Facades\\Facade::setFacadeApplication\(\) expects#'
 
 includes: []
